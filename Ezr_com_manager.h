@@ -1,0 +1,2 @@
+
+//extern volatile BYTE fListenOrSend;

@@ -1,0 +1,165 @@
+01/06/2023  UpdateVCUStatus: if got error from EZR  (VCU hasnt approved cmd) - reset cmdStatus to STATUS_IDLE.
+04/06/2023  PowerDownSleep - in case battery is very low and EZR is off - keep it off on sleep.
+05/06/2023  ValidateCBUHeader do not save packets with wrong CRC
+            Version: U.6.23.1 + 2                   
+13/06/2023  modem look for operator.
+            change name of func GetFirstCmdRow to GetVCUIndex.
+14/06/2023  define nSec2Start as unsigned long.
+            CalcScndsToStart - return unsigned long instead of int.
+            GetNextValveCmd - SEND ONLY commands that time to send is 2 byte number or less. not long.      
+15/06/2023  GetCmdsCnt - COUNT ONLY  commands that time to send is 2 byte number or less. not long.     
+            Version: U.6.23.3         
+18/06/2023  1. init valve array on reset. before load IDs
+            2. save PING message separately
+19/06/2023  1. validate vcu id array on reset. reset unlegal ID.
+            2. add handling with verizon modem - look for "verizon" on COPS command, than configure parameters on CGDCONT to IPV4V6 instead of IP.    
+            3. check CRC on RS485 packet on size, not size-1
+            U.6.23.4  
+20/06/2023  1. handle AT+COPS=1,2,,,, - if failed (after two attempts) - move to next operator until finish all operators list.
+            2. remove unnecessary AT commands  
+            3. move back to check CRC on RS485 packet on size-1 until use Itay's code.
+            U.6.23.5    
+22/06/2023  add task of configuration to CBU.
+            in command task - get tasks for all VCU - ping (99), reset (98), test(97)         
+            U.6.23.6         
+25/06/2023  modem connection proccess - 1. do not try to connect to operators with status "forbidden".
+            2. save for each operator its access technology and continue connection according to it.
+            3. remove modem model. the modem should connect UMTS and LTE as well.
+            U.6.23.6     
+26/06/2023  add flow definition of CBU get & set.
+            add delta & dry contact definition of CBU get & set
+            answer of port def is 0 (fail) or 1 (ok). not all definition.
+            IsConnect, IsReady - use strstr func    
+            currently ast metadata from CBU only once (not every 10 minutes).    
+            U.6.23.7
+27/06/2023  when connecting LTE do not use AT+CREG? only AT+CEREG?
+            change MAX_IRRIGATION_MNT from 1080 to 4320 (18 hours to 72 hours)
+            U.6.23.8    
+29/06/2023  1. fix update vlv list.     
+            2. fix close modem
+            3  do not disable external reset. If connecting takes long time and interrupt was shot- finish current AT and then go to do regular minutely
+            tasks. after finish - continue from the last state.                
+             U.6.23.9  
+03/07/2023  In modem process - distinguish between no answer from modem (-> opwer off modem) to error or wrong answer.
+            add check sum to list update post
+            U.7.23.1  
+            if valve status is on and message of reset or end of irrigation or vcu off arrived - change status to off.
+            U.7.23.4
+19/07/2023  validate CBU data for new CBU (Itay's).(ValidateCBUHeader - CRC)
+            U.7.23.5
+20/07/2023  nErrorOnConnect - limit the number of time it can get error, and stop the retry in case of success.
+            U.7.23.6            
+03/08/2023  add iExtPrm for each valve - use for special commands (ping, reset & test) and to sign that valve should start now.
+            double check CRC for RS485 packets - for old CRC & Itay's. if one of the is ok - packet accepted.
+            U.8.23.1   
+08/08/2023  Change sending and updating CBU metadata from server.
+            U.8.23.2    
+09/08/2023  1.set & get CBU meta data from CBU in one request. (C/c)
+            2.add FOTA for CBU
+            3. add checksum to CCU parameters message.
+            U.8.23.3
+            1. remove print on line 2163 for cs of params msg.
+            2. return -1 if cs is wrong 
+            U.8.23.4 not checked     
+28/08/2023  1. cooling - change irg command structure to cooling- add off time + cycles to command. use InsertExtNewCmd instead of InsertNewCmd.
+            2. change next irg to new structure and use pointer to add it when neede.
+            3. add stop all global command. if gets - stop pump immediately and send stop all to valves.
+            4. change saving valves data in eeprom - first specials (6 - ACK, 11-ERROR) than data (2,3,..)
+            5. CloseMainPump - send parameter whether to force closing or not. without consider the flag.
+            8.23.5   
+12/09/2023  1. if EZR return "NOLIST" instead of "NODATA" - to raise flag of g_bVlvListUpdated in order to send valves list to EZR.
+            2. if EZR return 0xAC as header of data its legal but raise flag of g_bVlvListUpdated...
+            3. if single VCU packet starts with 0x41 instead of 0x40 - means its data from not in list valve, and we should not consider it, just save & send.
+            4. add anothe byte ан PROTO_CMD_GET_DATA command , contains number of valves in ATMEL. add GetVlvCnt function
+            5. remove PROTO_CMD_START_FWUPGRADE. was not in use.(only in enum no). remove SProtoStartFwUpgradeRequest and use SProtoGetData instead
+            9.23.1    
+13/09/2023  UpdateVlvList - reset in eeprom valves that was removed from list.
+            9.23.2      
+12/11/2023  1. change UART0 baudrate to 9600
+            2. if CCU gets irg command for vlv not in list - add the valve  
+            3. UpdateVlvList - call FillList func instead of call itself
+            4. MAX_RX_BUF_LEN make it 220 in order to get list of 50 id's
+            5. get EZR FW version on reset
+            6. when one of data post failed - first reset pointers than find next post to send.     
+            7. send number of VCU in parameters message
+            8. if get task 10 (command) with value 6 - send vcu list to server.
+            9. retry get CBU minute data if failed
+            10. add OpenCloseMainPump function - try max  time to open or close. after 3 times of  retries - quit trying
+            11. CheckVCUStatus - if there is at least 1 open valve - and pump is off - open it, if no open valve and pump is on - close it
+            12. do not set EXT_START_NOW when command is for closing, only for start irrigation
+            11.23.2   
+12/2023     1. save '6' data when gets pump command
+            2. only work ith Itay's CBU version  
+            3. send if xtrnal rest in paramters mssage
+            4. close pump on reset.
+            12.23.2    
+10/01/2024  1. add inner index parametr to VCUDATA message
+            2. send pump action through vcudata route as well
+            3. iirrigation command includes inner index as well (total len 13)
+            4. use OpenPumpCmd whn opn pump now in direct command
+            1.24.1
+            for  CCU REV 3
+            1.24.11       
+16/01/2024  GetPumpCmdIdx return command index of pump, in case gets command.
+            save the index in data msg.
+18/01/2024  InsertExtNewCmd - do not change cmdData.startTime in case gets special command. its immidiately anyway.
+            UpdateVCUStatus - if get 2/3 from not opn valve - open it.    
+            1.24.2
+31/01/2024  save alert ID 100 on reset.
+            remove ISRAEL_QUICK_CONNECT
+            2.24.1   
+07/02/2024  sync with new CBU. 5 ports & 2 flow. minutly messag also changed.
+11/01/2024  CheckPumpFitStatus - aftr gets minutly data from CBU & EZR - chck if pump status fits, but only if iiit hasn't changd now.
+12/02/2024  add leds via CBU.  
+
+03/2024		1. CalcEndTime when start valve after gets 2 or 3
+			2. GetNextEprom2Send - put alert before CBU data
+			3. add IsAT function to find answer from modem when trying to configure modem baudrate.
+			4. FOTA - if FW to upgrade is 0 - quit
+			     
+27.03.2024  opeate pump as valve number 51
+28/03/2024  add STATUS_WAIT_2_START_ON for cases of shortening or extending irrigation
+
+02/04/2024  calc open & close periods during cooling irrigation and close pump in case none of the valves is open.
+            U.4.24.10    
+03/04/2024  1. if send irrigation cmd to valve, and irrigation time arrived before got ACK from valve - sign it as "open now"
+            2. SendPostMsg - calc number of messages in single post inside the function. send maximum 20 messages in each post.
+            - InitWritPntr - init both read &write pointers if they are equal
+            - ReadPacket - do not init read pointers when it reachs the write pointer 
+            - change external eeprom memory allocation
+            - GetNextEprom2Send - change condition to <= instead of <
+            U.4.24.11
+04/04/2024  1. save "6" as command confirmation when gets pump command.
+            U.4.24.13   
+09/04/2024  1. data manager - when adding to any of the write pointers - make sure it doesnt skip its writing limits.
+            2. define "END" address to each of writing sector and check it in ValidatePointers func.
+            3. for monitor - add option to send CBU version
+            4. CheckVCUStatus - if valve status is STATUS_WAIT_2_START_ON - sign bIsvlvOpen  as true.
+            5. change route o cooling task to getBulkCoolingTask, in order to get few tasks at once. adjust ParseValveCommandsWithDelay to it.  
+            6. set pointers structure size to 16 
+            U.4.24.14     
+10/04/2024  remove getBulkCoolingTask route and back to getCoolingTask route
+            U.4.24.15  
+17/04/2024  1. add 2 flags to eprmPonter - to sign if write pointer reachs end of section and starts from beggining again.
+            in case it does - change the calculation of data should be sent to server. 
+            2. in case read pointer reachs end of section - put it back to start.
+            3. few fits for monitoring - 1> send CBU version when ask to. 2> after connecting - get back to monitor     
+            4. treat the case of pump gets command to start now during it already open    
+            U.4.24.16 
+06/05/2024  1. remove TASK_EZR
+            2. remove function ClosePumpCmd
+            3. nextCmd - var instead of pointer
+            4. only reset EZR if hasnt got data for an hour
+            
+             
+
+                                                             
+
+                                                                                                     
+            
+            
+            
+
+            
+            
+            
